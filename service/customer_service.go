@@ -18,7 +18,6 @@ type CustomerService struct {
 func NewCustomerService(repo *repository.CustomerRepository) *CustomerService {
 	cs := &CustomerService{repo: repo}
 
-	// Seed admin if none exists
 	customers, _ := cs.repo.GetAll()
 	adminExists := false
 	for _, c := range customers {
@@ -30,7 +29,7 @@ func NewCustomerService(repo *repository.CustomerRepository) *CustomerService {
 	if !adminExists {
 		hashed, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
 		_ = cs.repo.Create(&model.Customer{
-			CustomerID: uuid.New(), // generate UUID here
+			CustomerID: uuid.New(),
 			FirstName:  "Admin",
 			LastName:   "User",
 			Email:      "admin@bank.com",
@@ -43,7 +42,6 @@ func NewCustomerService(repo *repository.CustomerRepository) *CustomerService {
 	return cs
 }
 
-// Authenticate verifies email/password and returns the customer if valid
 func (cs *CustomerService) Authenticate(email, password string) (*model.Customer, error) {
 	allCustomers, err := cs.repo.GetAll()
 	if err != nil {
@@ -64,7 +62,6 @@ func (cs *CustomerService) Authenticate(email, password string) (*model.Customer
 	return nil, errors.New("invalid email or password")
 }
 
-// CreateCustomer generates a UUID and creates a new customer
 func (cs *CustomerService) CreateCustomer(firstName, lastName, email, password, role string) (*model.Customer, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 
@@ -81,7 +78,7 @@ func (cs *CustomerService) CreateCustomer(firstName, lastName, email, password, 
 	}
 
 	c := &model.Customer{
-		CustomerID: uuid.New(), // ✅ generate UUID here
+		CustomerID: uuid.New(),
 		FirstName:  firstName,
 		LastName:   lastName,
 		Email:      email,
@@ -97,7 +94,6 @@ func (cs *CustomerService) CreateCustomer(firstName, lastName, email, password, 
 	return c, nil
 }
 
-// GetCustomerByID returns a customer by UUID
 func (cs *CustomerService) GetCustomerByID(id uuid.UUID) (*model.Customer, error) {
 	c, err := cs.repo.GetByID(id)
 	if err != nil {
@@ -106,7 +102,6 @@ func (cs *CustomerService) GetCustomerByID(id uuid.UUID) (*model.Customer, error
 	return c, nil
 }
 
-// UpdateCustomer updates fields of a customer
 func (cs *CustomerService) UpdateCustomer(id uuid.UUID, firstName, lastName, email, role string, isActive *bool) error {
 	c, err := cs.repo.GetByID(id)
 	if err != nil {
@@ -132,7 +127,6 @@ func (cs *CustomerService) UpdateCustomer(id uuid.UUID, firstName, lastName, ema
 	return cs.repo.Update(c)
 }
 
-// DeleteCustomer removes a customer by UUID
 func (cs *CustomerService) DeleteCustomer(id uuid.UUID) error {
 	c, err := cs.repo.GetByID(id)
 	if err != nil {
@@ -141,19 +135,16 @@ func (cs *CustomerService) DeleteCustomer(id uuid.UUID) error {
 	return cs.repo.Delete(c)
 }
 
-// GetAllCustomers returns all customers
 func (cs *CustomerService) GetAllCustomers() ([]model.Customer, error) {
 	return cs.repo.GetAll()
 }
 
-// GetAllCustomersPaginated returns filtered and paginated customers
 func (cs *CustomerService) GetAllCustomersPaginated(lastName string, page, limit int) ([]model.Customer, int64, error) {
 	allCustomers, err := cs.repo.GetAll()
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Filter by lastName and active status
 	filtered := []model.Customer{}
 	for _, c := range allCustomers {
 		if !c.IsActive {
@@ -166,7 +157,6 @@ func (cs *CustomerService) GetAllCustomersPaginated(lastName string, page, limit
 
 	total := int64(len(filtered))
 
-	// Calculate slice offset
 	start := (page - 1) * limit
 	if start >= len(filtered) {
 		return []model.Customer{}, total, nil

@@ -8,7 +8,6 @@ import (
 	"banking-app/apperror"
 )
 
-// UnmarshalJSON reads and unmarshals the JSON body of an HTTP request into `out`
 func UnmarshalJSON(r *http.Request, out interface{}) *apperror.AppError {
 	defer r.Body.Close()
 
@@ -32,7 +31,6 @@ func UnmarshalJSON(r *http.Request, out interface{}) *apperror.AppError {
 	return nil
 }
 
-// BindAndValidate unmarshals request JSON and runs an optional validation function
 func BindAndValidate(r *http.Request, out interface{}, validate func(interface{}) *apperror.AppError) *apperror.AppError {
 	if err := UnmarshalJSON(r, out); err != nil {
 		return err

@@ -16,7 +16,6 @@ func NewTransactionService(transactionRepo *repository.TransactionRepository) *T
 	return &TransactionService{transactionRepo: transactionRepo}
 }
 
-// --- Record deposit, withdrawal, transfer ---
 func (s *TransactionService) RecordDeposit(accountID uuid.UUID, amount float64) error {
 	if amount <= 0 {
 		return errors.New("deposit amount must be positive")
@@ -73,18 +72,14 @@ func (s *TransactionService) RecordTransfer(fromID, toID uuid.UUID, amount float
 	return s.transactionRepo.Create(txTo)
 }
 
-// --- Fetch transactions for a specific account ---
 func (s *TransactionService) GetTransactionsByAccount(accountID uuid.UUID) ([]model.Transaction, error) {
 	return s.transactionRepo.GetByAccountID(accountID)
 }
 
-// --- Fetch net transfers ---
 func (s *TransactionService) GetNetTransfers(accountID uuid.UUID) (float64, error) {
 	return s.transactionRepo.GetNetTransfer(accountID)
 }
 
-// --- Fetch all transactions (for admin, optional filtering in future) ---
 func (s *TransactionService) GetAllTransactions() ([]model.Transaction, error) {
-	// You can implement pagination/filtering in repo later
 	return s.transactionRepo.GetAll()
 }

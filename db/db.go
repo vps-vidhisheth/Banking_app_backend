@@ -16,7 +16,6 @@ var (
 	once       sync.Once
 )
 
-// InitDB initializes the database connection (singleton)
 func InitDB() {
 	once.Do(func() {
 		dsn := getDSN()
@@ -27,7 +26,6 @@ func InitDB() {
 			log.Fatalf(" Failed to connect to database: %v", err)
 		}
 
-		// AutoMigrate all models
 		err = dbInstance.AutoMigrate(
 			&model.Bank{},
 			&model.Customer{},
@@ -36,19 +34,17 @@ func InitDB() {
 			&model.Transaction{},
 		)
 		if err != nil {
-			log.Fatalf("❌ Failed to migrate models: %v", err)
+			log.Fatalf("Failed to migrate models: %v", err)
 		}
 
-		log.Println("✅ Database connected and models migrated successfully.")
+		log.Println(" Database connected and models migrated successfully.")
 
-		// Seed initial data if needed
 		if err := SeedData(dbInstance); err != nil {
-			log.Fatalf("❌ Failed to seed data: %v", err)
+			log.Fatalf(" Failed to seed data: %v", err)
 		}
 	})
 }
 
-// GetDB returns the DB instance
 func GetDB() *gorm.DB {
 	if dbInstance == nil {
 		InitDB()
@@ -56,7 +52,6 @@ func GetDB() *gorm.DB {
 	return dbInstance
 }
 
-// getDSN builds the Data Source Name from env variables or defaults
 func getDSN() string {
 	user := os.Getenv("DB_USER")
 	if user == "" {
@@ -79,6 +74,5 @@ func getDSN() string {
 		name = "banking_app_db"
 	}
 
-	// Return DSN in correct format for MySQL + GORM
 	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", user, pass, host, port, name)
 }

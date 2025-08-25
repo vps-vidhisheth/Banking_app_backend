@@ -33,7 +33,6 @@ func (h *LedgerHandler) staffOnly(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
-// GetAllLedgers fetches paginated ledger entries
 func (h *LedgerHandler) GetAllLedgers(w http.ResponseWriter, r *http.Request) {
 	if !h.staffOnly(w, r) {
 		return
@@ -41,7 +40,6 @@ func (h *LedgerHandler) GetAllLedgers(w http.ResponseWriter, r *http.Request) {
 
 	pagination := utils.GetPaginationParams(r, 10, 0)
 
-	// Optional account filter
 	var accountID uuid.UUID
 	if v := r.URL.Query().Get("account_id"); v != "" {
 		id, err := uuid.Parse(v)
@@ -61,7 +59,6 @@ func (h *LedgerHandler) GetAllLedgers(w http.ResponseWriter, r *http.Request) {
 	web.RespondJSON(w, http.StatusOK, utils.PaginatedResponse(ledgers, total, pagination.Limit, pagination.Offset))
 }
 
-// GetLedger fetches a single ledger by ID
 func (h *LedgerHandler) GetLedger(w http.ResponseWriter, r *http.Request) {
 	if !h.staffOnly(w, r) {
 		return
@@ -82,7 +79,6 @@ func (h *LedgerHandler) GetLedger(w http.ResponseWriter, r *http.Request) {
 	web.RespondJSON(w, http.StatusOK, ledger)
 }
 
-// GetNetBankTransfer calculates net transfer between two banks
 func (h *LedgerHandler) GetNetBankTransfer(w http.ResponseWriter, r *http.Request) {
 	if !h.staffOnly(w, r) {
 		return
@@ -116,7 +112,6 @@ func (h *LedgerHandler) GetNetBankTransfer(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-// RegisterLedgerRoutes registers all ledger routes
 func RegisterLedgerRoutes(r *mux.Router, h *LedgerHandler) {
 	r.HandleFunc("/ledgers", h.GetAllLedgers).Methods("GET")
 	r.HandleFunc("/ledgers/{id}", h.GetLedger).Methods("GET")

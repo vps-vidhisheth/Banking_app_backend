@@ -30,7 +30,6 @@ func (h *CustomerHandler) adminOnly(w http.ResponseWriter, r *http.Request) bool
 	return true
 }
 
-// Create a new customer (Admin only)
 func (h *CustomerHandler) CreateCustomerHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.adminOnly(w, r) {
 		return
@@ -89,7 +88,6 @@ func (h *CustomerHandler) GetCustomersHandler(w http.ResponseWriter, r *http.Req
 	web.RespondJSON(w, http.StatusOK, resp)
 }
 
-// Get customer by UUID
 func (h *CustomerHandler) GetCustomerByIDHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["id"]
 	id, err := uuid.Parse(idStr)
@@ -107,7 +105,6 @@ func (h *CustomerHandler) GetCustomerByIDHandler(w http.ResponseWriter, r *http.
 	web.RespondJSON(w, http.StatusOK, cust)
 }
 
-// Update customer (Admin only)
 func (h *CustomerHandler) UpdateCustomerHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.adminOnly(w, r) {
 		return
@@ -143,7 +140,6 @@ func (h *CustomerHandler) UpdateCustomerHandler(w http.ResponseWriter, r *http.R
 	})
 }
 
-// Delete customer (Admin only)
 func (h *CustomerHandler) DeleteCustomerHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.adminOnly(w, r) {
 		return
@@ -166,7 +162,6 @@ func (h *CustomerHandler) DeleteCustomerHandler(w http.ResponseWriter, r *http.R
 	})
 }
 
-// RegisterCustomerRoutes adds all customer routes to the router
 func RegisterCustomerRoutes(router *mux.Router, customerHandler *CustomerHandler) {
 	router.HandleFunc("/customers", customerHandler.GetCustomersHandler).Methods("GET")
 	router.HandleFunc("/customers/{id}", customerHandler.GetCustomerByIDHandler).Methods("GET")

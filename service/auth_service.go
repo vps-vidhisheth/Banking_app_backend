@@ -17,7 +17,6 @@ func NewAuthService(cs *CustomerService) *AuthService {
 	}
 }
 
-// Generate token using middleware helper
 func (a *AuthService) GenerateToken(customer *model.Customer) (string, error) {
 	userID, err := uuid.Parse(customer.CustomerID.String())
 	if err != nil {
@@ -26,7 +25,6 @@ func (a *AuthService) GenerateToken(customer *model.Customer) (string, error) {
 	return middleware.GenerateToken(userID, customer.Role)
 }
 
-// Authenticate delegates to CustomerService
 func (a *AuthService) Authenticate(email, password string) (string, error) {
 	customer, err := a.CustomerService.Authenticate(email, password)
 	if err != nil {

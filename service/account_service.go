@@ -26,7 +26,6 @@ func NewAccountService(
 	}
 }
 
-// Create a new account directly
 func (s *AccountService) CreateAccount(customerID, bankID uuid.UUID) (*model.Account, error) {
 	acc := &model.Account{
 		AccountID:  uuid.New(),
@@ -41,27 +40,22 @@ func (s *AccountService) CreateAccount(customerID, bankID uuid.UUID) (*model.Acc
 	return acc, nil
 }
 
-// Get account by UUID
 func (s *AccountService) GetAccountByID(id uuid.UUID) (*model.Account, error) {
 	return s.repo.GetByID(id)
 }
 
-// List accounts with optional filters
 func (s *AccountService) ListAccounts(page, limit int, customerID, bankID uuid.UUID) ([]*model.Account, error) {
 	return s.repo.List(page, limit, customerID, bankID)
 }
 
-// Update an account
 func (s *AccountService) UpdateAccount(acc *model.Account) error {
 	return s.repo.Update(acc)
 }
 
-// Delete an account
 func (s *AccountService) DeleteAccount(id uuid.UUID) error {
 	return s.repo.Delete(id)
 }
 
-// Deposit into an account
 func (s *AccountService) Deposit(accountID, customerID uuid.UUID, amount float64) error {
 	if amount <= 0 {
 		return errors.New("deposit amount must be positive")
@@ -87,7 +81,6 @@ func (s *AccountService) Deposit(accountID, customerID uuid.UUID, amount float64
 	return err
 }
 
-// Withdraw from an account
 func (s *AccountService) Withdraw(accountID, customerID uuid.UUID, amount float64) error {
 	if amount <= 0 {
 		return errors.New("withdraw amount must be positive")
@@ -116,7 +109,6 @@ func (s *AccountService) Withdraw(accountID, customerID uuid.UUID, amount float6
 	return err
 }
 
-// Transfer between two accounts
 func (s *AccountService) Transfer(fromAccID, toAccID, fromCustomerID, toCustomerID uuid.UUID, amount float64) error {
 	if amount <= 0 {
 		return errors.New("transfer amount must be positive")

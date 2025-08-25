@@ -30,7 +30,6 @@ func (h *BankHandler) adminOnly(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
-// Create a new bank
 func (h *BankHandler) CreateBankHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.adminOnly(w, r) {
 		return
@@ -60,13 +59,11 @@ func (h *BankHandler) CreateBankHandler(w http.ResponseWriter, r *http.Request) 
 	web.RespondJSON(w, http.StatusCreated, bank)
 }
 
-// Get all banks
 // Get all banks with pagination
 func (h *BankHandler) GetAllBanksHandler(w http.ResponseWriter, r *http.Request) {
-	// Extract pagination parameters from query
-	params := utils.GetPaginationParams(r, 10, 0) // default limit=10, offset=0
 
-	// Get all banks
+	params := utils.GetPaginationParams(r, 10, 0)
+
 	allBanks, err := h.Service.ListBanks()
 	if err != nil {
 		web.RespondErrorMessage(w, http.StatusInternalServerError, err.Error())
@@ -75,7 +72,6 @@ func (h *BankHandler) GetAllBanksHandler(w http.ResponseWriter, r *http.Request)
 
 	total := int64(len(allBanks))
 
-	// Apply pagination
 	start := params.Offset
 	if start > len(allBanks) {
 		start = len(allBanks)
@@ -86,11 +82,9 @@ func (h *BankHandler) GetAllBanksHandler(w http.ResponseWriter, r *http.Request)
 	}
 	paginatedBanks := allBanks[start:end]
 
-	// Respond with paginated results
 	web.RespondJSON(w, http.StatusOK, utils.PaginatedResponse(paginatedBanks, total, params.Limit, params.Offset))
 }
 
-// Get bank by UUID
 func (h *BankHandler) GetBankByIDHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["id"]
 	id, err := uuid.Parse(idStr)
@@ -108,7 +102,6 @@ func (h *BankHandler) GetBankByIDHandler(w http.ResponseWriter, r *http.Request)
 	web.RespondJSON(w, http.StatusOK, bank)
 }
 
-// Update bank name
 func (h *BankHandler) UpdateBankHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.adminOnly(w, r) {
 		return
@@ -143,7 +136,6 @@ func (h *BankHandler) UpdateBankHandler(w http.ResponseWriter, r *http.Request) 
 	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "bank updated"})
 }
 
-// Delete bank
 func (h *BankHandler) DeleteBankHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.adminOnly(w, r) {
 		return
@@ -164,7 +156,6 @@ func (h *BankHandler) DeleteBankHandler(w http.ResponseWriter, r *http.Request) 
 	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "bank deleted"})
 }
 
-// RegisterBankRoutes registers all bank-related routes
 func RegisterBankRoutes(router *mux.Router, h *BankHandler) {
 	router.HandleFunc("/banks", h.CreateBankHandler).Methods("POST")
 	router.HandleFunc("/banks/{id}", h.GetBankByIDHandler).Methods("GET")

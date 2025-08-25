@@ -20,7 +20,6 @@ func NewTransactionHandler(service *service.TransactionService) *TransactionHand
 	return &TransactionHandler{service: service}
 }
 
-// ---------------- Deposit ----------------
 func (h *TransactionHandler) DepositHandler(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
 		AccountID string  `json:"account_id"`
@@ -46,7 +45,6 @@ func (h *TransactionHandler) DepositHandler(w http.ResponseWriter, r *http.Reque
 	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "Deposit successful"})
 }
 
-// ---------------- Withdrawal ----------------
 func (h *TransactionHandler) WithdrawalHandler(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
 		AccountID string  `json:"account_id"`
@@ -72,7 +70,6 @@ func (h *TransactionHandler) WithdrawalHandler(w http.ResponseWriter, r *http.Re
 	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "Withdrawal successful"})
 }
 
-// ---------------- Transfer ----------------
 func (h *TransactionHandler) TransferHandler(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
 		FromAccount string  `json:"from_account"`
@@ -105,7 +102,6 @@ func (h *TransactionHandler) TransferHandler(w http.ResponseWriter, r *http.Requ
 	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "Transfer successful"})
 }
 
-// ---------------- Get transactions by account ----------------
 func (h *TransactionHandler) GetTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 	accountIDStr := mux.Vars(r)["id"]
 	accountID, err := uuid.Parse(accountIDStr)
@@ -123,7 +119,6 @@ func (h *TransactionHandler) GetTransactionsHandler(w http.ResponseWriter, r *ht
 	web.RespondJSON(w, http.StatusOK, transactions)
 }
 
-// ---------------- Get net transfers ----------------
 func (h *TransactionHandler) GetNetTransfersHandler(w http.ResponseWriter, r *http.Request) {
 	accountIDStr := mux.Vars(r)["id"]
 	accountID, err := uuid.Parse(accountIDStr)
@@ -141,7 +136,6 @@ func (h *TransactionHandler) GetNetTransfersHandler(w http.ResponseWriter, r *ht
 	web.RespondJSON(w, http.StatusOK, map[string]float64{"net_transfers": net})
 }
 
-// ---------------- Get all transactions (with optional account filter) ----------------
 func (h *TransactionHandler) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
 	pagination := utils.GetPaginationParams(r, 10, 0)
 
@@ -168,7 +162,6 @@ func (h *TransactionHandler) GetAllTransactions(w http.ResponseWriter, r *http.R
 	web.RespondJSON(w, http.StatusOK, utils.PaginatedResponse(transactions, int64(len(transactions)), pagination.Limit, pagination.Offset))
 }
 
-// ---------------- Register routes ----------------
 func RegisterTransactionRoutes(r *mux.Router, h *TransactionHandler) {
 	r.HandleFunc("/transactions/account/{id}", h.GetTransactionsHandler).Methods("GET")
 	r.HandleFunc("/transactions/account/{id}/net", h.GetNetTransfersHandler).Methods("GET")

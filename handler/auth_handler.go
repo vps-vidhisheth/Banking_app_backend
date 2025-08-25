@@ -27,19 +27,16 @@ type loginResponse struct {
 func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 
-	// Use web.UnmarshalJSON for request parsing
 	if err := web.UnmarshalJSON(r, &req); err != nil {
 		web.RespondError(w, err)
 		return
 	}
 
-	// Authenticate user
 	token, err := h.AuthService.Authenticate(req.Email, req.Password)
 	if err != nil {
 		web.RespondErrorMessage(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	// Respond with token
 	web.RespondJSON(w, http.StatusOK, loginResponse{Token: token})
 }

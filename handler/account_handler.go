@@ -62,7 +62,6 @@ func (h *AccountHandler) ListAccountsHandler(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	// Get total count
 	total, err := h.service.CountAccounts(customerID, bankID)
 	if err != nil {
 		web.RespondErrorMessage(w, http.StatusInternalServerError, err.Error())
@@ -78,7 +77,6 @@ func (h *AccountHandler) ListAccountsHandler(w http.ResponseWriter, r *http.Requ
 	web.RespondJSON(w, http.StatusOK, utils.PaginatedResponse(accounts, total, pagination.Limit, pagination.Offset))
 }
 
-// Create account
 func (h *AccountHandler) CreateAccountHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.staffOnly(w, r) {
 		return
@@ -114,7 +112,6 @@ func (h *AccountHandler) CreateAccountHandler(w http.ResponseWriter, r *http.Req
 	web.RespondJSON(w, http.StatusCreated, acc)
 }
 
-// Get account
 func (h *AccountHandler) GetAccountHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.staffOnly(w, r) {
 		return
@@ -135,7 +132,6 @@ func (h *AccountHandler) GetAccountHandler(w http.ResponseWriter, r *http.Reques
 	web.RespondJSON(w, http.StatusOK, acc)
 }
 
-// Update account
 func (h *AccountHandler) UpdateAccountHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.staffOnly(w, r) {
 		return
@@ -176,7 +172,6 @@ func (h *AccountHandler) UpdateAccountHandler(w http.ResponseWriter, r *http.Req
 	web.RespondJSON(w, http.StatusOK, acc)
 }
 
-// Delete account
 func (h *AccountHandler) DeleteAccountHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.staffOnly(w, r) {
 		return
@@ -196,7 +191,6 @@ func (h *AccountHandler) DeleteAccountHandler(w http.ResponseWriter, r *http.Req
 	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "account deleted successfully"})
 }
 
-// Deposit
 func (h *AccountHandler) DepositHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.staffOnly(w, r) {
 		return
@@ -231,7 +225,6 @@ func (h *AccountHandler) DepositHandler(w http.ResponseWriter, r *http.Request) 
 	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "deposit successful"})
 }
 
-// Withdraw
 func (h *AccountHandler) WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.staffOnly(w, r) {
 		return
@@ -266,7 +259,6 @@ func (h *AccountHandler) WithdrawHandler(w http.ResponseWriter, r *http.Request)
 	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "withdraw successful"})
 }
 
-// Transfer
 func (h *AccountHandler) TransferHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.staffOnly(w, r) {
 		return

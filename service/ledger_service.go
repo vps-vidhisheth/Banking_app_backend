@@ -18,7 +18,6 @@ func NewLedgerService(repo *repository.LedgerRepository) *LedgerService {
 	return &LedgerService{repo: repo}
 }
 
-// CreateLedger creates a new ledger entry with proper UUID
 func (s *LedgerService) CreateLedger(accountID uuid.UUID, amount float64, ledgerType, description string, bankFromID, bankToID *uuid.UUID) (*model.Ledger, error) {
 	if amount <= 0 {
 		return nil, errors.New("amount must be greater than zero")
@@ -39,7 +38,7 @@ func (s *LedgerService) CreateLedger(accountID uuid.UUID, amount float64, ledger
 	}
 
 	entry := &model.Ledger{
-		LedgerID:        uuid.New(), // <-- generate a new UUID here
+		LedgerID:        uuid.New(),
 		AccountID:       &accountID,
 		BankFromID:      bankFromID,
 		BankToID:        bankToID,
@@ -56,22 +55,18 @@ func (s *LedgerService) CreateLedger(accountID uuid.UUID, amount float64, ledger
 	return entry, nil
 }
 
-// GetAllLedgers fetches ledgers for an account with pagination
 func (s *LedgerService) GetAllLedgers(accountID uuid.UUID, limit, offset int) ([]model.Ledger, int64, error) {
 	return s.repo.ListByAccount(accountID, limit, offset)
 }
 
-// DeleteLedger deletes a ledger by ID
 func (s *LedgerService) DeleteLedger(id uuid.UUID) error {
 	return s.repo.Delete(id)
 }
 
-// GetNetBankTransfer computes net transfer between two banks
 func (s *LedgerService) GetNetBankTransfer(bankFromID, bankToID uuid.UUID) (float64, error) {
 	return s.repo.NetBankTransfer(bankFromID, bankToID)
 }
 
-// GetLedger fetches a ledger by ID
 func (s *LedgerService) GetLedger(id uuid.UUID) (*model.Ledger, error) {
 	return s.repo.GetByID(id)
 }

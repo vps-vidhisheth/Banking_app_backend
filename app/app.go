@@ -17,7 +17,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// App represents the banking application
 type App struct {
 	sync.Mutex
 	Name       string
@@ -49,7 +48,6 @@ type App struct {
 	}
 }
 
-// NewApp initializes the banking app
 func NewApp(name string, wg *sync.WaitGroup, jwtSecret string) *App {
 	a := &App{
 		Name: name,
@@ -102,15 +100,12 @@ func (a *App) initHandlers() {
 func (a *App) initRouter() {
 	a.Router = mux.NewRouter().StrictSlash(true)
 
-	// Public route
 	a.Router.HandleFunc("/login", a.Handler.Auth.LoginHandler).Methods("POST")
 
-	// API routes with middleware
 	api := a.Router.PathPrefix("/api/v1").Subrouter()
 	api.Use(CORSMiddleware)
-	api.Use(middleware.AuthMiddleware) // JWT auth
+	api.Use(middleware.AuthMiddleware)
 
-	// Register routes
 	handler.RegisterCustomerRoutes(api, a.Handler.Customer)
 	handler.RegisterAccountRoutes(api, a.Handler.Account)
 	handler.RegisterLedgerRoutes(api, a.Handler.Ledger)
@@ -147,11 +142,11 @@ func (a *App) Stop() {
 	defer cancel()
 
 	if err := a.Server.Shutdown(ctx); err != nil {
-		log.Printf("❌ Server shutdown failed: %v", err)
+		log.Printf(" Server shutdown failed: %v", err)
 		return
 	}
 
-	log.Println("✅ Server stopped gracefully")
+	log.Println(" Server stopped gracefully")
 }
 
 func CORSMiddleware(next http.Handler) http.Handler {

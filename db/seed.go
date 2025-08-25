@@ -9,13 +9,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// SeedData creates the first admin if it doesn't exist
 func SeedData(database *gorm.DB) error {
 	var count int64
 	database.Model(&model.Customer{}).Where("role = ?", "admin").Count(&count)
 
 	if count > 0 {
-		log.Println("ℹ️ Admin user already exists, skipping seeding.")
+		log.Println(" Admin user already exists, skipping seeding.")
 		return nil
 	}
 
@@ -37,6 +36,6 @@ func SeedData(database *gorm.DB) error {
 		return fmt.Errorf("failed to create admin user: %w", err)
 	}
 
-	log.Println("✅ First admin user created successfully.")
+	log.Println(" First admin user created successfully.")
 	return nil
 }

@@ -41,7 +41,6 @@ func (r *CustomerRepository) Delete(c *model.Customer) error {
 		return err
 	}
 
-	// Soft-delete accounts
 	return r.db.Model(&model.Account{}).
 		Where("customer_id = ?", c.CustomerID).
 		Update("is_active", false).Error

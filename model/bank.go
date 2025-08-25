@@ -9,5 +9,5 @@ type Bank struct {
 	Name         string    `gorm:"not null" json:"name"`
 	Abbreviation string    `json:"abbreviation"`
 	IsActive     bool      `gorm:"default:true" json:"is_active"`
-	Accounts     []Account `gorm:"foreignKey:BankID" json:"accounts"` // One-to-many relationship
+	Accounts     []Account `gorm:"foreignKey:BankID" json:"accounts"`
 }

@@ -17,19 +17,16 @@ const UserContextKey contextKey = "user"
 
 var jwtSecret []byte
 
-// SetJWTSecret sets the secret key for JWT signing
 func SetJWTSecret(secret string) {
 	jwtSecret = []byte(secret)
 }
 
-// Claims represents JWT claims with UserID as string
 type Claims struct {
-	UserID string `json:"user_id"` // store UUID as string
+	UserID string `json:"user_id"`
 	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-// GenerateToken creates a JWT token for a user
 func GenerateToken(userID uuid.UUID, role string) (string, error) {
 	claims := &Claims{
 		UserID: userID.String(),
@@ -46,7 +43,6 @@ func GenerateToken(userID uuid.UUID, role string) (string, error) {
 	return token.SignedString(jwtSecret)
 }
 
-// AuthMiddleware validates JWT tokens and sets claims in context
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
@@ -76,32 +72,27 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Ensure UserID is a valid UUID string
 		if claims.UserID == "" {
 			writeError(w, http.StatusUnauthorized, "invalid user_id in token")
 			return
 		}
 
-		// Attach claims to context
 		ctx := context.WithValue(r.Context(), UserContextKey, claims)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-// writeError responds with JSON error message
 func writeError(w http.ResponseWriter, status int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }
 
-// GetUserClaims returns JWT claims from request context
 func GetUserClaims(r *http.Request) (*Claims, bool) {
 	claims, ok := r.Context().Value(UserContextKey).(*Claims)
 	return claims, ok
 }
 
-// Helper to parse UUID from claims when needed
 func GetUserID(r *http.Request) (uuid.UUID, bool) {
 	claims, ok := GetUserClaims(r)
 	if !ok {
