@@ -62,7 +62,7 @@ func (h *BankHandler) CreateBankHandler(w http.ResponseWriter, r *http.Request) 
 // Get all banks with pagination
 func (h *BankHandler) GetAllBanksHandler(w http.ResponseWriter, r *http.Request) {
 
-	params := utils.GetPaginationParams(r, 10, 0)
+	params := utils.GetPaginationParams(r, 2, 0)
 
 	allBanks, err := h.Service.ListBanks()
 	if err != nil {

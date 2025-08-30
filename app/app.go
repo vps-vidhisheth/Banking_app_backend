@@ -66,7 +66,7 @@ func NewApp(name string, wg *sync.WaitGroup, jwtSecret string) *App {
 
 func (a *App) initDatabase() {
 	db.InitDB()
-	log.Println("✅ Database initialized successfully")
+	log.Println(" Database initialized successfully")
 }
 
 func (a *App) initRepositories() {
@@ -126,7 +126,7 @@ func (a *App) initServer() {
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  30 * time.Second,
 	}
-	log.Printf("✅ Server initialized on port %s", port)
+	log.Printf(" Server initialized on port %s", port)
 }
 
 func (a *App) Start() error {

@@ -69,7 +69,7 @@ func (h *CustomerHandler) CreateCustomerHandler(w http.ResponseWriter, r *http.R
 // Get all customers with pagination + filtering
 func (h *CustomerHandler) GetCustomersHandler(w http.ResponseWriter, r *http.Request) {
 	lastName := r.URL.Query().Get("last_name")
-	pagination := utils.GetPaginationParams(r, 10, 1)
+	pagination := utils.GetPaginationParams(r, 2, 1)
 
 	customers, total, err := h.Service.GetAllCustomersPaginated(lastName, pagination.Offset, pagination.Limit)
 	if err != nil {

@@ -137,7 +137,7 @@ func (h *TransactionHandler) GetNetTransfersHandler(w http.ResponseWriter, r *ht
 }
 
 func (h *TransactionHandler) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
-	pagination := utils.GetPaginationParams(r, 10, 0)
+	pagination := utils.GetPaginationParams(r, 2, 0)
 
 	var transactions []model.Transaction
 	var err error

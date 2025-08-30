@@ -48,7 +48,7 @@ func (h *AccountHandler) ListAccountsHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	pagination := utils.GetPaginationParams(r, 10, 0)
+	pagination := utils.GetPaginationParams(r, 2, 0)
 
 	var customerID, bankID uuid.UUID
 	if v := r.URL.Query().Get("customer_id"); v != "" {

@@ -138,7 +138,6 @@ func (cs *CustomerService) DeleteCustomer(id uuid.UUID) error {
 func (cs *CustomerService) GetAllCustomers() ([]model.Customer, error) {
 	return cs.repo.GetAll()
 }
-
 func (cs *CustomerService) GetAllCustomersPaginated(lastName string, page, limit int) ([]model.Customer, int64, error) {
 	allCustomers, err := cs.repo.GetAll()
 	if err != nil {
@@ -156,6 +155,11 @@ func (cs *CustomerService) GetAllCustomersPaginated(lastName string, page, limit
 	}
 
 	total := int64(len(filtered))
+
+	// Ensure page >= 1
+	if page < 1 {
+		page = 1
+	}
 
 	start := (page - 1) * limit
 	if start >= len(filtered) {
