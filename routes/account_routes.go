@@ -1,26 +1,29 @@
 package routes
 
 import (
-	"banking-app/handler"
+	accountHandler "banking-app/component/account/controller"
+	accountService "banking-app/component/account/service"
+	ledgerService "banking-app/component/ledger/service"
+	transactionService "banking-app/component/transactions/service" // ✅ plural
 	"banking-app/repository"
-	"banking-app/service"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
 
 func InitAccountModule(router *mux.Router, db *gorm.DB) {
+	// Create UnitOfWork from DB
+	uow := repository.NewUnitOfWork(db)
 
-	accountRepo := repository.NewAccountRepository(db)
-	ledgerRepo := repository.NewLedgerRepository(db)
-	transactionRepo := repository.NewTransactionRepository(db)
+	// Services
+	ledgerSvc := ledgerService.NewLedgerService(db)
+	transactionSvc := transactionService.NewTransactionService(db)
 
-	ledgerService := service.NewLedgerService(ledgerRepo)
-	transactionService := service.NewTransactionService(transactionRepo)
+	accountSvc := accountService.NewAccountService(uow, ledgerSvc, transactionSvc)
 
-	accountService := service.NewAccountService(accountRepo, ledgerService, transactionService)
+	// Handler
+	accHandler := accountHandler.NewAccountHandler(accountSvc)
 
-	accountHandler := handler.NewAccountHandler(accountService)
-
-	handler.RegisterAccountRoutes(router, accountHandler)
+	// Routes
+	accountHandler.RegisterAccountRoutes(router, accHandler)
 }

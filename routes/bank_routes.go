@@ -1,21 +1,25 @@
 package routes
 
 import (
-	"banking-app/handler"
+	handler "banking-app/component/banks/controller"
+	service "banking-app/component/banks/service"
+	"banking-app/model"
 	"banking-app/repository"
-	"banking-app/service"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
 
 func InitBankModule(router *mux.Router, db *gorm.DB) {
+	// repository
+	bankRepo := repository.NewRepository[model.Bank](db)
 
-	bankRepo := repository.NewBankRepository(db)
+	// service
+	bankSvc := service.NewBankService(bankRepo, db) // ✅ pass db as second argument
 
-	bankService := service.NewBankService(bankRepo)
+	// handler
+	bankHandler := handler.NewBankHandler(bankSvc)
 
-	bankHandler := handler.NewBankHandler(bankService)
-
+	// routes
 	handler.RegisterBankRoutes(router, bankHandler)
 }

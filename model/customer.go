@@ -1,7 +1,10 @@
 package model
 
 import (
+	"time"
+
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type Customer struct {
@@ -13,4 +16,7 @@ type Customer struct {
 	Role       string    `gorm:"not null" json:"role"`
 	IsActive   bool      `gorm:"default:true" json:"is_active"`
 	Accounts   []Account `gorm:"foreignKey:CustomerID" json:"accounts"`
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	DeletedAt  gorm.DeletedAt `gorm:"index"` // Soft delete
 }

@@ -1,20 +1,20 @@
 package routes
 
 import (
-	"banking-app/handler"
-	"banking-app/repository"
-	"banking-app/service"
+	handler "banking-app/component/transactions/controller"
+	service "banking-app/component/transactions/service"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
 
 func InitTransactionModule(router *mux.Router, db *gorm.DB) {
-	transactionRepo := repository.NewTransactionRepository(db)
+	// service (only pass db)
+	transactionService := service.NewTransactionService(db)
 
-	transactionService := service.NewTransactionService(transactionRepo)
-
+	// handler
 	transactionHandler := handler.NewTransactionHandler(transactionService)
 
+	// routes
 	handler.RegisterTransactionRoutes(router, transactionHandler)
 }

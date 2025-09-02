@@ -1,8 +1,8 @@
 // package handler
 
 // import (
+// 	"banking-app/component/ledger/service"
 // 	"banking-app/middleware"
-// 	"banking-app/service"
 // 	"banking-app/utils"
 // 	"banking-app/web"
 // 	"net/http"
@@ -33,24 +33,26 @@
 // 	return true
 // }
 
+// // GET /ledgers?account_id=<optional>
 // func (h *LedgerHandler) GetAllLedgers(w http.ResponseWriter, r *http.Request) {
 // 	if !h.staffOnly(w, r) {
 // 		return
 // 	}
 
-// 	pagination := utils.GetPaginationParams(r, 2, 0)
+// 	ctx := r.Context()
+// 	pagination := utils.GetPaginationParams(r, 20, 0)
 
-// 	var accountID uuid.UUID
+// 	var accountID *uuid.UUID
 // 	if v := r.URL.Query().Get("account_id"); v != "" {
 // 		id, err := uuid.Parse(v)
 // 		if err != nil {
 // 			web.RespondErrorMessage(w, http.StatusBadRequest, "invalid account_id format")
 // 			return
 // 		}
-// 		accountID = id
+// 		accountID = &id
 // 	}
 
-// 	ledgers, total, err := h.LedgerService.GetAllLedgers(accountID, pagination.Limit, pagination.Offset)
+// 	ledgers, total, err := h.LedgerService.GetAllLedgers(ctx, accountID, pagination.Limit, pagination.Offset)
 // 	if err != nil {
 // 		web.RespondErrorMessage(w, http.StatusInternalServerError, err.Error())
 // 		return
@@ -59,18 +61,20 @@
 // 	web.RespondJSON(w, http.StatusOK, utils.PaginatedResponse(ledgers, total, pagination.Limit, pagination.Offset))
 // }
 
+// // GET /ledgers/{id}
 // func (h *LedgerHandler) GetLedger(w http.ResponseWriter, r *http.Request) {
 // 	if !h.staffOnly(w, r) {
 // 		return
 // 	}
 
+// 	ctx := r.Context()
 // 	id := web.ParseUUIDParam(r, "id")
 // 	if id == uuid.Nil {
 // 		web.RespondErrorMessage(w, http.StatusBadRequest, "invalid ledger id")
 // 		return
 // 	}
 
-// 	ledger, err := h.LedgerService.GetLedger(id)
+// 	ledger, err := h.LedgerService.GetLedger(ctx, id)
 // 	if err != nil {
 // 		web.RespondErrorMessage(w, http.StatusNotFound, err.Error())
 // 		return
@@ -79,11 +83,13 @@
 // 	web.RespondJSON(w, http.StatusOK, ledger)
 // }
 
+// // GET /ledgers/net-transfer?bank_from_id=...&bank_to_id=...
 // func (h *LedgerHandler) GetNetBankTransfer(w http.ResponseWriter, r *http.Request) {
 // 	if !h.staffOnly(w, r) {
 // 		return
 // 	}
 
+// 	ctx := r.Context()
 // 	bankFromStr := r.URL.Query().Get("bank_from_id")
 // 	bankToStr := r.URL.Query().Get("bank_to_id")
 
@@ -99,7 +105,7 @@
 // 		return
 // 	}
 
-// 	net, err := h.LedgerService.GetNetBankTransfer(bankFromID, bankToID)
+// 	net, err := h.LedgerService.GetNetBankTransfer(ctx, bankFromID, bankToID)
 // 	if err != nil {
 // 		web.RespondErrorMessage(w, http.StatusInternalServerError, err.Error())
 // 		return
@@ -113,16 +119,16 @@
 // }
 
 // func RegisterLedgerRoutes(r *mux.Router, h *LedgerHandler) {
+// 	r.HandleFunc("/ledgers/net-transfer", h.GetNetBankTransfer).Methods("GET") // put first
 // 	r.HandleFunc("/ledgers", h.GetAllLedgers).Methods("GET")
 // 	r.HandleFunc("/ledgers/{id}", h.GetLedger).Methods("GET")
-// 	r.HandleFunc("/ledgers/net-transfer", h.GetNetBankTransfer).Methods("GET")
 // }
 
 package handler
 
 import (
+	"banking-app/component/ledger/service"
 	"banking-app/middleware"
-	"banking-app/service"
 	"banking-app/utils"
 	"banking-app/web"
 	"net/http"
@@ -153,16 +159,29 @@ func (h *LedgerHandler) staffOnly(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
-// GET /ledgers?account_id=<optional>
+// GET /ledgers?account_id=<optional>&entry_type=<optional>&transaction_type=<optional>
 func (h *LedgerHandler) GetAllLedgers(w http.ResponseWriter, r *http.Request) {
 	if !h.staffOnly(w, r) {
 		return
 	}
 
-	pagination := utils.GetPaginationParams(r, 2, 0)
+	ctx := r.Context()
+	pagination := utils.GetPaginationParams(r, 20, 0)
+
+	// Collect query filters
+	filters := map[string]string{
+		"account_id":       r.URL.Query().Get("account_id"),
+		"entry_type":       r.URL.Query().Get("entry_type"),
+		"transaction_type": r.URL.Query().Get("transaction_type"),
+	}
+
+	if err := h.LedgerService.CheckLedgersWithFilters(ctx, filters); err != nil {
+		web.RespondErrorMessage(w, http.StatusNotFound, err.Error())
+		return
+	}
 
 	var accountID *uuid.UUID
-	if v := r.URL.Query().Get("account_id"); v != "" {
+	if v := filters["account_id"]; v != "" {
 		id, err := uuid.Parse(v)
 		if err != nil {
 			web.RespondErrorMessage(w, http.StatusBadRequest, "invalid account_id format")
@@ -171,7 +190,7 @@ func (h *LedgerHandler) GetAllLedgers(w http.ResponseWriter, r *http.Request) {
 		accountID = &id
 	}
 
-	ledgers, total, err := h.LedgerService.GetAllLedgers(accountID, pagination.Limit, pagination.Offset)
+	ledgers, total, err := h.LedgerService.GetAllLedgers(ctx, accountID, pagination.Limit, pagination.Offset)
 	if err != nil {
 		web.RespondErrorMessage(w, http.StatusInternalServerError, err.Error())
 		return
@@ -186,19 +205,19 @@ func (h *LedgerHandler) GetLedger(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := r.Context()
 	id := web.ParseUUIDParam(r, "id")
 	if id == uuid.Nil {
 		web.RespondErrorMessage(w, http.StatusBadRequest, "invalid ledger id")
 		return
 	}
 
-	ledger, err := h.LedgerService.GetLedger(id)
-	if err != nil {
+	if err := h.LedgerService.CheckLedgerExists(ctx, id); err != nil {
 		web.RespondErrorMessage(w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	web.RespondJSON(w, http.StatusOK, ledger)
+	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "ledger exists"})
 }
 
 // GET /ledgers/net-transfer?bank_from_id=...&bank_to_id=...
@@ -207,6 +226,7 @@ func (h *LedgerHandler) GetNetBankTransfer(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	ctx := r.Context()
 	bankFromStr := r.URL.Query().Get("bank_from_id")
 	bankToStr := r.URL.Query().Get("bank_to_id")
 
@@ -222,7 +242,7 @@ func (h *LedgerHandler) GetNetBankTransfer(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	net, err := h.LedgerService.GetNetBankTransfer(bankFromID, bankToID)
+	net, err := h.LedgerService.GetNetBankTransfer(ctx, bankFromID, bankToID)
 	if err != nil {
 		web.RespondErrorMessage(w, http.StatusInternalServerError, err.Error())
 		return
@@ -234,6 +254,7 @@ func (h *LedgerHandler) GetNetBankTransfer(w http.ResponseWriter, r *http.Reques
 		"net_transfer": net,
 	})
 }
+
 func RegisterLedgerRoutes(r *mux.Router, h *LedgerHandler) {
 	r.HandleFunc("/ledgers/net-transfer", h.GetNetBankTransfer).Methods("GET") // put first
 	r.HandleFunc("/ledgers", h.GetAllLedgers).Methods("GET")

@@ -1,20 +1,20 @@
 package routes
 
 import (
-	"banking-app/handler"
-	"banking-app/repository"
-	"banking-app/service"
+	handler "banking-app/component/customer/controller"
+	service "banking-app/component/customer/service"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
 
 func InitCustomerModule(router *mux.Router, db *gorm.DB) {
-	customerRepo := repository.NewCustomerRepository(db)
+	// service
+	customerService := service.NewCustomerService(db) // ✅ only db
 
-	customerService := service.NewCustomerService(customerRepo)
-
+	// handler
 	customerHandler := handler.NewCustomerHandler(customerService)
 
+	// routes
 	handler.RegisterCustomerRoutes(router, customerHandler)
 }
