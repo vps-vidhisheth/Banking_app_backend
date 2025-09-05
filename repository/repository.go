@@ -16,7 +16,7 @@ func NewRepository[T any](db *gorm.DB) *Repository[T] {
 	return &Repository[T]{db: db}
 }
 
-// ✅ Create a new record
+// Create a new record
 func (r *Repository[T]) Create(ctx context.Context, entity *T) error {
 	if entity == nil {
 		return errors.New("entity cannot be nil")
@@ -24,7 +24,7 @@ func (r *Repository[T]) Create(ctx context.Context, entity *T) error {
 	return r.db.WithContext(ctx).Create(entity).Error
 }
 
-// ✅ Get one record by condition
+// Get one record by condition
 func (r *Repository[T]) GetOne(ctx context.Context, query string, args ...interface{}) (*T, error) {
 	var entity T
 	if err := r.db.WithContext(ctx).Where(query, args...).First(&entity).Error; err != nil {
@@ -36,7 +36,7 @@ func (r *Repository[T]) GetOne(ctx context.Context, query string, args ...interf
 	return &entity, nil
 }
 
-// ✅ Get by ID
+// Get by ID
 func (r *Repository[T]) GetByID(ctx context.Context, id interface{}) (*T, error) {
 	var entity T
 	if err := r.db.WithContext(ctx).First(&entity, id).Error; err != nil {
@@ -48,7 +48,7 @@ func (r *Repository[T]) GetByID(ctx context.Context, id interface{}) (*T, error)
 	return &entity, nil
 }
 
-// ✅ Update
+// Update
 func (r *Repository[T]) Update(ctx context.Context, entity *T) error {
 	if entity == nil {
 		return errors.New("entity cannot be nil")
@@ -96,7 +96,7 @@ func (r *Repository[T]) DeleteByID(ctx context.Context, id interface{}) error {
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&entity).Error
 }
 
-// ✅ List with filters + pagination
+// List with filters + pagination
 func (r *Repository[T]) List(ctx context.Context, limit, offset int, filters map[string]interface{}) ([]T, error) {
 	var entities []T
 	query := r.db.WithContext(ctx).Model(new(T))
@@ -115,7 +115,7 @@ func (r *Repository[T]) List(ctx context.Context, limit, offset int, filters map
 	return entities, nil
 }
 
-// ✅ Count with filters
+// Count with filters
 func (r *Repository[T]) Count(ctx context.Context, filters map[string]interface{}) (int64, error) {
 	var count int64
 	query := r.db.WithContext(ctx).Model(new(T))
@@ -130,12 +130,10 @@ func (r *Repository[T]) Count(ctx context.Context, filters map[string]interface{
 	return count, nil
 }
 
-// ✅ Transaction support
+// Transaction support
 func (r *Repository[T]) WithTransaction(tx *gorm.DB) *Repository[T] {
 	return &Repository[T]{db: tx}
 }
-
-// ✅ Extra helpers for advanced queries ----------------------
 
 // Find with raw GORM query builder
 func (r *Repository[T]) FindWithQuery(ctx context.Context, queryFn func(*gorm.DB) *gorm.DB) ([]T, error) {

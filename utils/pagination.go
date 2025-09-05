@@ -31,7 +31,6 @@ func GetPaginationParams(r *http.Request, defaultLimit, defaultOffset int) Pagin
 	}
 }
 
-// PaginatedResponse wraps results with metadata
 func PaginatedResponse(data interface{}, total int64, limit, offset int) map[string]interface{} {
 	return map[string]interface{}{
 		"total":  total,
@@ -41,7 +40,6 @@ func PaginatedResponse(data interface{}, total int64, limit, offset int) map[str
 	}
 }
 
-// Optional: helper to build SQL filter for LIKE queries
 func BuildFilterQuery(filters map[string]string) (string, []interface{}) {
 	var queryParts []string
 	var args []interface{}

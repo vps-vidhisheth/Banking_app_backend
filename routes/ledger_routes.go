@@ -9,12 +9,10 @@ import (
 )
 
 func InitLedgerModule(router *mux.Router, db *gorm.DB) {
-	// service
-	ledgerService := service.NewLedgerService(db) // uses db internally
 
-	// handler
+	ledgerService := service.NewLedgerService(db)
+
 	ledgerHandler := handler.NewLedgerHandler(ledgerService)
 
-	// routes
 	handler.RegisterLedgerRoutes(router, ledgerHandler)
 }

@@ -11,15 +11,12 @@ import (
 )
 
 func InitBankModule(router *mux.Router, db *gorm.DB) {
-	// repository
+
 	bankRepo := repository.NewRepository[model.Bank](db)
 
-	// service
-	bankSvc := service.NewBankService(bankRepo, db) // ✅ pass db as second argument
+	bankSvc := service.NewBankService(bankRepo, db)
 
-	// handler
 	bankHandler := handler.NewBankHandler(bankSvc)
 
-	// routes
 	handler.RegisterBankRoutes(router, bankHandler)
 }
