@@ -24,8 +24,6 @@ func NewLedgerService(db *gorm.DB) *LedgerService {
 	}
 }
 
-// ----------------- Create Ledger -----------------
-// Supports running inside or outside a transaction
 func (s *LedgerService) CreateLedger(ctx context.Context, accountID uuid.UUID, amount float64, ledgerType, description string, bankFromID, bankToID *uuid.UUID, tx *gorm.DB) error {
 	if amount <= 0 {
 		return errors.New("amount must be greater than zero")
@@ -66,15 +64,12 @@ func (s *LedgerService) CreateLedger(ctx context.Context, accountID uuid.UUID, a
 	})
 }
 
-// ----------------- Update Ledger -----------------
-// Example: only soft-delete support
 func (s *LedgerService) DeleteLedger(ctx context.Context, id uuid.UUID) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return s.repo.WithTransaction(tx).DeleteByID(ctx, id)
 	})
 }
 
-// ----------------- Check Ledger Exists -----------------
 func (s *LedgerService) CheckLedgerExists(ctx context.Context, id uuid.UUID) error {
 	ledger, err := s.repo.GetByID(ctx, id)
 	if err != nil {
@@ -86,8 +81,6 @@ func (s *LedgerService) CheckLedgerExists(ctx context.Context, id uuid.UUID) err
 	return nil
 }
 
-// ----------------- List Ledgers with Filters -----------------
-// Supports query params: account_id, entry_type, transaction_type
 func (s *LedgerService) CheckLedgersWithFilters(ctx context.Context, filters map[string]string) error {
 	query := make(map[string]interface{})
 
@@ -125,7 +118,6 @@ func (s *LedgerService) CheckLedgersWithFilters(ctx context.Context, filters map
 	return nil
 }
 
-// ----------------- Check Any Ledger Exists -----------------
 func (s *LedgerService) CheckAnyLedgers(ctx context.Context) error {
 	ledgers, err := s.repo.List(ctx, 1, 0, nil)
 	if err != nil {
@@ -137,7 +129,6 @@ func (s *LedgerService) CheckAnyLedgers(ctx context.Context) error {
 	return nil
 }
 
-// GetAllLedgers returns list of ledgers with optional account filter
 func (s *LedgerService) GetAllLedgers(ctx context.Context, accountID *uuid.UUID, limit, offset int) ([]model.Ledger, int64, error) {
 	filters := map[string]interface{}{}
 	if accountID != nil && *accountID != uuid.Nil {
@@ -160,26 +151,26 @@ func (s *LedgerService) GetAllLedgers(ctx context.Context, accountID *uuid.UUID,
 	return ledgers, count, nil
 }
 
-// GetNetBankTransfer calculates net transfer amount between two banks
 func (s *LedgerService) GetNetBankTransfer(ctx context.Context, bankFromID, bankToID uuid.UUID) (float64, error) {
-	var debitSum, creditSum float64
-	// Sum debit side
+	var debitSum, reverseDebitSum float64
+
 	if err := s.db.WithContext(ctx).
 		Model(&model.Ledger{}).
-		Select("COALESCE(SUM(amount),0)").
+		Select("COALESCE(SUM(amount), 0)").
 		Where("bank_from_id = ? AND bank_to_id = ? AND entry_type = ?", bankFromID, bankToID, "debit").
 		Scan(&debitSum).Error; err != nil {
 		return 0, err
 	}
 
-	// Sum credit side
 	if err := s.db.WithContext(ctx).
 		Model(&model.Ledger{}).
-		Select("COALESCE(SUM(amount),0)").
-		Where("bank_from_id = ? AND bank_to_id = ? AND entry_type = ?", bankFromID, bankToID, "credit").
-		Scan(&creditSum).Error; err != nil {
+		Select("COALESCE(SUM(amount), 0)").
+		Where("bank_from_id = ? AND bank_to_id = ? AND entry_type = ?", bankToID, bankFromID, "debit").
+		Scan(&reverseDebitSum).Error; err != nil {
 		return 0, err
 	}
-	return debitSum, nil // treat debit as actual outflow
 
+	netTransfer := debitSum - reverseDebitSum
+
+	return netTransfer, nil
 }

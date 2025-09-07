@@ -11,7 +11,6 @@ type PaginationParams struct {
 	Offset int
 }
 
-// GetPaginationParams extracts `limit` and `offset` from query params with defaults
 func GetPaginationParams(r *http.Request, defaultLimit, defaultOffset int) PaginationParams {
 	q := r.URL.Query()
 

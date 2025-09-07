@@ -14,23 +14,19 @@ type AuthService struct {
 	CustomerService *customerSvc.CustomerService
 }
 
-// constructor
 func NewAuthService(cs *customerSvc.CustomerService) *AuthService {
 	return &AuthService{
 		CustomerService: cs,
 	}
 }
 
-// Authenticate validates credentials and returns error only
 func (a *AuthService) Authenticate(ctx context.Context, email, password string) error {
-	// Use CustomerService to check credentials
 	if err := a.CustomerService.Authenticate(ctx, email, password); err != nil {
 		return err
 	}
 	return nil
 }
 
-// GenerateToken returns error if customer is invalid
 func (a *AuthService) GenerateToken(customer *model.Customer) (string, error) {
 	if customer == nil {
 		return "", errors.New("invalid customer")

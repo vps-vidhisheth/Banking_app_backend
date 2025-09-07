@@ -4,7 +4,6 @@ import (
 	"net/http"
 )
 
-// AdminOnly middleware allows only admins
 func AdminOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := GetUserClaims(r)
@@ -22,7 +21,6 @@ func AdminOnly(next http.Handler) http.Handler {
 	})
 }
 
-// StaffOnly middleware allows only staff
 func StaffOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := GetUserClaims(r)

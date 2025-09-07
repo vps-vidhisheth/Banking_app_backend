@@ -21,7 +21,6 @@ func NewBankHandler(service *service.BankService) *BankHandler {
 	return &BankHandler{Service: service}
 }
 
-// ---------------- Admin Middleware ----------------
 func (h *BankHandler) adminOnly(w http.ResponseWriter, r *http.Request) bool {
 	claims, ok := middleware.GetUserClaims(r)
 	if !ok || claims.Role != "admin" {
@@ -31,7 +30,6 @@ func (h *BankHandler) adminOnly(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
-// ---------------- Create Bank ----------------
 func (h *BankHandler) CreateBankHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.adminOnly(w, r) {
 		return
@@ -64,7 +62,6 @@ func (h *BankHandler) GetAllBanksHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Pagination
 	limit := 10
 	offset := 0
 	if l := r.URL.Query().Get("limit"); l != "" {
@@ -78,14 +75,11 @@ func (h *BankHandler) GetAllBanksHandler(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	//  Filters
+	name := r.URL.Query().Get("search")
 	filters := map[string]string{
-		"name":         r.URL.Query().Get("name"),
-		"abbreviation": r.URL.Query().Get("abbreviation"),
-		"is_active":    r.URL.Query().Get("is_active"),
+		"name": name,
 	}
 
-	//  Use filters
 	banks, total, err := h.Service.ListBanksWithFilters(r.Context(), limit, offset, filters)
 	if err != nil {
 		web.RespondErrorMessage(w, http.StatusInternalServerError, err.Error())
@@ -102,7 +96,6 @@ func (h *BankHandler) GetAllBanksHandler(w http.ResponseWriter, r *http.Request)
 	web.RespondJSON(w, http.StatusOK, response)
 }
 
-// ---------------- Get Bank By ID ----------------
 func (h *BankHandler) GetBankByIDHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["id"]
 	id, err := uuid.Parse(idStr)
@@ -111,15 +104,15 @@ func (h *BankHandler) GetBankByIDHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := h.Service.CheckBankExists(r.Context(), id); err != nil {
+	bank, err := h.Service.GetBankByID(r.Context(), id)
+	if err != nil {
 		web.RespondErrorMessage(w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "bank exists"})
+	web.RespondJSON(w, http.StatusOK, bank)
 }
 
-// ---------------- Update Bank ----------------
 func (h *BankHandler) UpdateBankHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.adminOnly(w, r) {
 		return
@@ -154,7 +147,6 @@ func (h *BankHandler) UpdateBankHandler(w http.ResponseWriter, r *http.Request) 
 	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "bank updated"})
 }
 
-// ---------------- Delete Bank ----------------
 func (h *BankHandler) DeleteBankHandler(w http.ResponseWriter, r *http.Request) {
 	if !h.adminOnly(w, r) {
 		return
@@ -175,9 +167,7 @@ func (h *BankHandler) DeleteBankHandler(w http.ResponseWriter, r *http.Request) 
 	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "bank deleted"})
 }
 
-// ---------------- Register Routes ----------------
 func RegisterBankRoutes(router *mux.Router, h *BankHandler) {
-	// All routes admin-only
 	router.Handle("/banks", middleware.AdminOnly(http.HandlerFunc(h.CreateBankHandler))).Methods("POST")
 	router.Handle("/banks/{id}", middleware.AdminOnly(http.HandlerFunc(h.GetBankByIDHandler))).Methods("GET")
 	router.Handle("/banks", middleware.AdminOnly(http.HandlerFunc(h.GetAllBanksHandler))).Methods("GET")

@@ -18,5 +18,5 @@ type Customer struct {
 	Accounts   []Account `gorm:"foreignKey:CustomerID" json:"accounts"`
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
-	DeletedAt  gorm.DeletedAt `gorm:"index"` // Soft delete
+	DeletedAt  gorm.DeletedAt `gorm:"index"`
 }

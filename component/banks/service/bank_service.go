@@ -21,7 +21,6 @@ func NewBankService(repo *repository.Repository[model.Bank], db *gorm.DB) *BankS
 	return &BankService{repo: repo, db: db}
 }
 
-// ----------------- Create Bank -----------------
 func (s *BankService) CreateBank(ctx context.Context, name string) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -46,7 +45,6 @@ func (s *BankService) CreateBank(ctx context.Context, name string) error {
 	})
 }
 
-// ----------------- Update Bank -----------------
 func (s *BankService) UpdateBank(ctx context.Context, bankID uuid.UUID, newName string) error {
 	newName = strings.TrimSpace(newName)
 	if newName == "" {
@@ -74,7 +72,6 @@ func (s *BankService) UpdateBank(ctx context.Context, bankID uuid.UUID, newName 
 	})
 }
 
-// ----------------- Delete Bank (soft-delete active accounts first) -----------------
 func (s *BankService) DeleteBank(ctx context.Context, bankID uuid.UUID) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		bankRepo := repository.NewRepository[model.Bank](tx)
@@ -88,7 +85,6 @@ func (s *BankService) DeleteBank(ctx context.Context, bankID uuid.UUID) error {
 			return errors.New("bank not found")
 		}
 
-		// Soft delete all active accounts
 		accounts, err := accountRepo.List(ctx, 0, 0, map[string]interface{}{
 			"bank_id":   bankID,
 			"is_active": true,
@@ -104,14 +100,12 @@ func (s *BankService) DeleteBank(ctx context.Context, bankID uuid.UUID) error {
 			}
 		}
 
-		// Soft delete the bank
 		bank.IsActive = false
 		bank.DeletedAt = gorm.DeletedAt{Time: time.Now(), Valid: true}
 		return bankRepo.Update(ctx, bank)
 	})
 }
 
-// ----------------- Check Bank Exists -----------------
 func (s *BankService) CheckBankExists(ctx context.Context, bankID uuid.UUID) error {
 	bank, err := s.repo.GetOne(ctx, "bank_id = ? AND is_active = ?", bankID, true)
 	if err != nil {
@@ -123,7 +117,6 @@ func (s *BankService) CheckBankExists(ctx context.Context, bankID uuid.UUID) err
 	return nil
 }
 
-// ----------------- Check Any Active Banks -----------------
 func (s *BankService) CheckAnyBanks(ctx context.Context) error {
 	filters := map[string]interface{}{"is_active = ?": true}
 	banks, err := s.repo.List(ctx, 1, 0, filters)
@@ -136,8 +129,6 @@ func (s *BankService) CheckAnyBanks(ctx context.Context) error {
 	return nil
 }
 
-// ----------------- Check Banks with Filters -----------------
-// Supports filters: name, abbreviation, is_active
 func (s *BankService) CheckBanksWithFilters(ctx context.Context, filters map[string]string) error {
 	query := make(map[string]interface{})
 	for key, value := range filters {
@@ -168,7 +159,6 @@ func (s *BankService) CheckBanksWithFilters(ctx context.Context, filters map[str
 	return nil
 }
 
-// ----------------- List Active Banks with Pagination -----------------
 func (s *BankService) ListBanksPaginated(ctx context.Context, limit, offset int) ([]model.Bank, int64, error) {
 	filters := map[string]interface{}{"is_active = ?": true}
 
@@ -216,4 +206,15 @@ func (s *BankService) ListBanksWithFilters(ctx context.Context, limit, offset in
 	}
 
 	return banks, total, nil
+}
+
+func (s *BankService) GetBankByID(ctx context.Context, bankID uuid.UUID) (*model.Bank, error) {
+	bank, err := s.repo.GetOne(ctx, "bank_id = ? AND is_active = ?", bankID, true)
+	if err != nil {
+		return nil, err
+	}
+	if bank == nil {
+		return nil, errors.New("bank not found")
+	}
+	return bank, nil
 }

@@ -154,7 +154,6 @@ func (a *App) initServer() {
 	log.Printf("Server initialized on port %s", port)
 }
 
-// ---------------- Start / Stop Server ----------------
 func (a *App) Start() error {
 	log.Println("🔹 Starting server...")
 	if err := a.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -175,7 +174,6 @@ func (a *App) Stop() {
 	log.Println("Server stopped gracefully")
 }
 
-// ---------------- CORS Middleware ----------------
 func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:4200")
@@ -191,7 +189,6 @@ func CORSMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// ---------------- NewApp Constructor ----------------
 func NewApp(name string, wg *sync.WaitGroup, jwtSecret string) *App {
 	a := &App{
 		Name: name,

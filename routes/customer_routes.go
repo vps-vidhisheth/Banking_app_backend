@@ -9,12 +9,10 @@ import (
 )
 
 func InitCustomerModule(router *mux.Router, db *gorm.DB) {
-	// service
-	customerService := service.NewCustomerService(db) // ✅ only db
 
-	// handler
+	customerService := service.NewCustomerService(db)
+
 	customerHandler := handler.NewCustomerHandler(customerService)
 
-	// routes
 	handler.RegisterCustomerRoutes(router, customerHandler)
 }

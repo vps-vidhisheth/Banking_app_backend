@@ -21,7 +21,6 @@ func NewCustomerService(db *gorm.DB) *CustomerService {
 	repo := repository.NewRepository[model.Customer](db)
 	cs := &CustomerService{repo: repo, db: db}
 
-	// Bootstrap default admin if not present
 	customers, _ := cs.repo.List(context.Background(), 0, 0, nil)
 	adminExists := false
 	for _, c := range customers {
@@ -46,7 +45,6 @@ func NewCustomerService(db *gorm.DB) *CustomerService {
 	return cs
 }
 
-// ---------------- AUTHENTICATION ----------------
 func (cs *CustomerService) Authenticate(ctx context.Context, email, password string) error {
 	email = strings.TrimSpace(strings.ToLower(email))
 
@@ -68,7 +66,6 @@ func (cs *CustomerService) Authenticate(ctx context.Context, email, password str
 	return errors.New("invalid email or password")
 }
 
-// ---------------- CREATE CUSTOMER ----------------
 func (cs *CustomerService) CreateCustomer(ctx context.Context, firstName, lastName, email, password, role string) error {
 	email = strings.TrimSpace(strings.ToLower(email))
 
@@ -99,7 +96,6 @@ func (cs *CustomerService) CreateCustomer(ctx context.Context, firstName, lastNa
 	})
 }
 
-// ---------------- UPDATE CUSTOMER ----------------
 func (cs *CustomerService) UpdateCustomer(ctx context.Context, id uuid.UUID, firstName, lastName, email, role string, isActive *bool) error {
 	return cs.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		txRepo := repository.NewRepository[model.Customer](tx)
@@ -129,7 +125,6 @@ func (cs *CustomerService) UpdateCustomer(ctx context.Context, id uuid.UUID, fir
 	})
 }
 
-// ---------------- DELETE CUSTOMER ----------------
 func (cs *CustomerService) DeleteCustomer(ctx context.Context, id uuid.UUID) error {
 	return cs.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		txRepo := repository.NewRepository[model.Customer](tx)
@@ -137,7 +132,6 @@ func (cs *CustomerService) DeleteCustomer(ctx context.Context, id uuid.UUID) err
 	})
 }
 
-// ---------------- CHECK CUSTOMER EXISTS WITH FILTERS ----------------
 func (cs *CustomerService) CheckCustomerExists(ctx context.Context, filters map[string]string) error {
 	if filters == nil {
 		return errors.New("no filters provided")
@@ -160,7 +154,6 @@ func (cs *CustomerService) CheckCustomerExists(ctx context.Context, filters map[
 	return nil
 }
 
-// ---------------- GET CUSTOMER BY EMAIL ----------------
 func (cs *CustomerService) GetCustomerByEmail(ctx context.Context, email string) (*model.Customer, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 	customers, err := cs.repo.List(ctx, 0, 0, map[string]interface{}{"email = ?": email})
@@ -173,29 +166,68 @@ func (cs *CustomerService) GetCustomerByEmail(ctx context.Context, email string)
 	return &customers[0], nil
 }
 
-// ListCustomers returns paginated customers with optional filters
 func (cs *CustomerService) ListCustomers(ctx context.Context, limit, offset int, filters map[string]string) ([]model.Customer, error) {
-	queryFilters := make(map[string]interface{})
-	for k, v := range filters {
-		if v != "" {
-			queryFilters[k+" LIKE ?"] = "%" + v + "%"
-		}
+	query := cs.db.WithContext(ctx).Model(&model.Customer{})
+
+	if search, ok := filters["search"]; ok && search != "" {
+		like := "%" + search + "%"
+		query = query.Where("first_name LIKE ? OR last_name LIKE ? OR email LIKE ?", like, like, like)
 	}
-	return cs.repo.List(ctx, limit, offset, queryFilters)
+
+	if v := filters["first_name"]; v != "" {
+		query = query.Where("first_name LIKE ?", "%"+v+"%")
+	}
+	if v := filters["last_name"]; v != "" {
+		query = query.Where("last_name LIKE ?", "%"+v+"%")
+	}
+	if v := filters["email"]; v != "" {
+		query = query.Where("email LIKE ?", "%"+v+"%")
+	}
+	if v := filters["role"]; v != "" {
+		query = query.Where("role = ?", v)
+	}
+
+	if limit > 0 {
+		query = query.Limit(limit).Offset(offset)
+	}
+
+	query = query.Order("customer_id ASC")
+
+	var customers []model.Customer
+	if err := query.Find(&customers).Error; err != nil {
+		return nil, err
+	}
+	return customers, nil
 }
 
-// CountCustomers returns total count of customers matching filters
 func (cs *CustomerService) CountCustomers(ctx context.Context, filters map[string]string) (int64, error) {
-	queryFilters := make(map[string]interface{})
-	for k, v := range filters {
-		if v != "" {
-			queryFilters[k+" LIKE ?"] = "%" + v + "%"
-		}
+	query := cs.db.WithContext(ctx).Model(&model.Customer{})
+
+	if search, ok := filters["search"]; ok && search != "" {
+		like := "%" + search + "%"
+		query = query.Where("first_name LIKE ? OR last_name LIKE ? OR email LIKE ?", like, like, like)
 	}
-	return cs.repo.Count(ctx, queryFilters)
+
+	if v := filters["first_name"]; v != "" {
+		query = query.Where("first_name LIKE ?", "%"+v+"%")
+	}
+	if v := filters["last_name"]; v != "" {
+		query = query.Where("last_name LIKE ?", "%"+v+"%")
+	}
+	if v := filters["email"]; v != "" {
+		query = query.Where("email LIKE ?", "%"+v+"%")
+	}
+	if v := filters["role"]; v != "" {
+		query = query.Where("role = ?", v)
+	}
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
-// GetCustomerByID returns the customer object by ID
 func (cs *CustomerService) GetCustomerByID(ctx context.Context, id uuid.UUID) (*model.Customer, error) {
 	customer, err := cs.repo.GetOne(ctx, "customer_id = ?", id)
 	if err != nil {

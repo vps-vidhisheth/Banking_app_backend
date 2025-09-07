@@ -19,7 +19,6 @@ func NewTransactionHandler(service *service.TransactionService) *TransactionHand
 	return &TransactionHandler{service: service}
 }
 
-// GetTransactionsHandler - single transaction by ID
 func (h *TransactionHandler) GetTransactionByIDHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["id"]
 	id, err := uuid.Parse(idStr)
@@ -37,7 +36,6 @@ func (h *TransactionHandler) GetTransactionByIDHandler(w http.ResponseWriter, r 
 	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "transaction exists"})
 }
 
-// GetTransactionsHandler - list transactions with optional filters
 func (h *TransactionHandler) GetTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 	pagination := utils.GetPaginationParams(r, 10, 0)
 	limit := pagination.Limit
@@ -83,7 +81,6 @@ func (h *TransactionHandler) GetTransactionsHandler(w http.ResponseWriter, r *ht
 	web.RespondJSON(w, http.StatusOK, utils.PaginatedResponse(results, total, limit, offset))
 }
 
-// RegisterTransactionRoutes
 func RegisterTransactionRoutes(router *mux.Router, h *TransactionHandler) {
 	router.HandleFunc("/transactions/{id}", h.GetTransactionByIDHandler).Methods("GET")
 	router.HandleFunc("/transactions", h.GetTransactionsHandler).Methods("GET")

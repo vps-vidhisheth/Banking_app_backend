@@ -12,5 +12,5 @@ type Account struct {
 	Balance    float64        `gorm:"not null;default:1000" json:"balance"`
 	IsActive   bool           `gorm:"default:true" json:"is_active"`
 	Ledgers    []Ledger       `gorm:"foreignKey:AccountID" json:"ledgers"`
-	DeletedAt  gorm.DeletedAt `gorm:"index"` // Soft delete
+	DeletedAt  gorm.DeletedAt `gorm:"index"`
 }

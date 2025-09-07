@@ -7,6 +7,7 @@ import (
 	"banking-app/repository"
 	"banking-app/utils"
 	"banking-app/web"
+	"encoding/json"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -21,18 +22,23 @@ func NewAccountHandler(service *service.AccountService) *AccountHandler {
 	return &AccountHandler{service: service}
 }
 
+type TransferPayload struct {
+	FromAccountID string  `json:"from_account_id"`
+	ToAccountID   string  `json:"to_account_id"`
+	Amount        float64 `json:"amount"`
+	Description   string  `json:"description,omitempty"`
+}
+
 func RegisterAccountRoutes(router *mux.Router, h *AccountHandler) {
 	router.Handle("/accounts", middleware.StaffOnly(http.HandlerFunc(h.CreateAccountHandler))).Methods("POST")
 	router.Handle("/accounts", middleware.StaffOnly(http.HandlerFunc(h.ListAccountsHandler))).Methods("GET")
 	router.Handle("/accounts/{id}", middleware.StaffOnly(http.HandlerFunc(h.GetAccountHandler))).Methods("GET")
-	router.Handle("/accounts/{id}", middleware.StaffOnly(http.HandlerFunc(h.UpdateAccountHandler))).Methods("PUT")
 	router.Handle("/accounts/{id}", middleware.StaffOnly(http.HandlerFunc(h.DeleteAccountHandler))).Methods("DELETE")
 	router.Handle("/accounts/{id}/deposit", middleware.StaffOnly(http.HandlerFunc(h.DepositHandler))).Methods("POST")
 	router.Handle("/accounts/{id}/withdraw", middleware.StaffOnly(http.HandlerFunc(h.WithdrawHandler))).Methods("POST")
 	router.Handle("/accounts/transfer", middleware.StaffOnly(http.HandlerFunc(h.TransferHandler))).Methods("POST")
 }
 
-// ---------------- Self Access Check ----------------
 func (h *AccountHandler) selfOnly(w http.ResponseWriter, r *http.Request, accountID uuid.UUID) bool {
 	claims, ok := middleware.GetUserClaims(r)
 	if !ok {
@@ -46,14 +52,12 @@ func (h *AccountHandler) selfOnly(w http.ResponseWriter, r *http.Request, accoun
 		return false
 	}
 
-	// Parse claims.UserID string to uuid.UUID
 	callerUUID, err := uuid.Parse(claims.UserID)
 	if err != nil {
 		web.RespondErrorMessage(w, http.StatusUnauthorized, "invalid user ID in token")
 		return false
 	}
 
-	// Check if the account belongs to the logged-in user
 	if acc.CustomerID != callerUUID {
 		web.RespondErrorMessage(w, http.StatusForbidden, "you can only access your own account")
 		return false
@@ -62,17 +66,17 @@ func (h *AccountHandler) selfOnly(w http.ResponseWriter, r *http.Request, accoun
 	return true
 }
 
-// ---------------- Create Account ----------------
 func (h *AccountHandler) CreateAccountHandler(w http.ResponseWriter, r *http.Request) {
-	// Get logged-in user
+
 	claims, ok := middleware.GetUserClaims(r)
+
 	if !ok {
 		web.RespondErrorMessage(w, http.StatusUnauthorized, "unauthenticated")
 		return
 	}
 
 	var payload struct {
-		BankID string `json:"bank_id"` // only bank_id is allowed
+		BankID string `json:"bank_id"`
 	}
 	if err := web.UnmarshalJSON(r, &payload); err != nil {
 		web.RespondErrorMessage(w, http.StatusBadRequest, err.Message)
@@ -85,7 +89,6 @@ func (h *AccountHandler) CreateAccountHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Use only logged-in user's ID
 	userID, err := uuid.Parse(claims.UserID)
 	if err != nil {
 		web.RespondErrorMessage(w, http.StatusUnauthorized, "invalid user ID")
@@ -95,16 +98,20 @@ func (h *AccountHandler) CreateAccountHandler(w http.ResponseWriter, r *http.Req
 	uow := repository.NewUnitOfWork(db.GetDB())
 	defer uow.Rollback()
 
-	if err := h.service.CreateAccountWithUOW(uow, userID, bankID); err != nil {
+	createdAccount, err := h.service.CreateAccountWithUOW(uow, userID, bankID)
+	if err != nil {
 		web.RespondErrorMessage(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	uow.Commit()
-	web.RespondJSON(w, http.StatusCreated, map[string]string{"message": "account created successfully"})
+	if err := uow.Commit(); err != nil {
+		web.RespondErrorMessage(w, http.StatusInternalServerError, "failed to commit transaction")
+		return
+	}
+
+	web.RespondJSON(w, http.StatusCreated, createdAccount)
 }
 
-// ---------------- Deposit ----------------
 func (h *AccountHandler) DepositHandler(w http.ResponseWriter, r *http.Request) {
 	accountID, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil {
@@ -112,7 +119,6 @@ func (h *AccountHandler) DepositHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Ensure staff can only deposit into their own account
 	claims, ok := middleware.GetUserClaims(r)
 	if !ok {
 		web.RespondErrorMessage(w, http.StatusUnauthorized, "unauthenticated")
@@ -149,7 +155,6 @@ func (h *AccountHandler) DepositHandler(w http.ResponseWriter, r *http.Request) 
 	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "deposit successful"})
 }
 
-// ---------------- Withdraw ----------------
 func (h *AccountHandler) WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 	accountID, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil {
@@ -157,7 +162,6 @@ func (h *AccountHandler) WithdrawHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Get user claims
 	claims, ok := middleware.GetUserClaims(r)
 	if !ok {
 		web.RespondErrorMessage(w, http.StatusUnauthorized, "unauthenticated")
@@ -170,7 +174,6 @@ func (h *AccountHandler) WithdrawHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Ensure staff can only withdraw from their own account
 	if !h.selfOnly(w, r, accountID) {
 		return
 	}
@@ -196,104 +199,68 @@ func (h *AccountHandler) WithdrawHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *AccountHandler) TransferHandler(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		FromAccountID string  `json:"from_account_id"`
-		ToAccountID   string  `json:"to_account_id"`
-		Amount        float64 `json:"amount"`
-	}
-	if err := web.UnmarshalJSON(r, &payload); err != nil {
-		web.RespondErrorMessage(w, http.StatusBadRequest, err.Message)
+	var payload TransferPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	uow := repository.NewUnitOfWork(db.GetDB())
+	defer func() {
+		if r := recover(); r != nil {
+			uow.Rollback()
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+		}
+	}()
+
+	ctx := r.Context()
 
 	fromAccID, err := uuid.Parse(payload.FromAccountID)
 	if err != nil {
-		web.RespondErrorMessage(w, http.StatusBadRequest, "invalid from_account_id")
+		http.Error(w, "invalid from_account_id", http.StatusBadRequest)
 		return
 	}
-
 	toAccID, err := uuid.Parse(payload.ToAccountID)
 	if err != nil {
-		web.RespondErrorMessage(w, http.StatusBadRequest, "invalid to_account_id")
+		http.Error(w, "invalid to_account_id", http.StatusBadRequest)
 		return
 	}
 
-	// Get user claims
-	claims, ok := middleware.GetUserClaims(r)
-	if !ok {
-		web.RespondErrorMessage(w, http.StatusUnauthorized, "unauthenticated")
-		return
-	}
-
-	fromCustomerID, err := uuid.Parse(claims.UserID)
+	fromAcc, err := h.service.RepoGetByID(ctx, fromAccID)
 	if err != nil {
-		web.RespondErrorMessage(w, http.StatusUnauthorized, "invalid user ID in token")
+		uow.Rollback()
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// Ensure staff can only transfer from their own account
-	if !h.selfOnly(w, r, fromAccID) {
-		return
-	}
-
-	// Get destination account to retrieve its owner (toCustomerID)
-	toAcc, err := h.service.RepoGetByID(r.Context(), toAccID)
+	toAcc, err := h.service.RepoGetByID(ctx, toAccID)
 	if err != nil {
-		web.RespondErrorMessage(w, http.StatusNotFound, "destination account not found")
-		return
-	}
-	toCustomerID := toAcc.CustomerID
-
-	uow := repository.NewUnitOfWork(db.GetDB())
-	defer uow.Rollback()
-
-	if err := h.service.TransferWithUOW(uow, fromAccID, toAccID, fromCustomerID, toCustomerID, payload.Amount); err != nil {
-		web.RespondErrorMessage(w, http.StatusBadRequest, err.Error())
+		uow.Rollback()
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	uow.Commit()
-	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "transfer successful"})
+	err = h.service.TransferWithUOW(
+		uow,
+		fromAcc.AccountID,
+		toAcc.AccountID,
+		fromAcc.CustomerID,
+		toAcc.CustomerID,
+		payload.Amount,
+	)
+	if err != nil {
+		uow.Rollback()
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := uow.Commit(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{"message": "Transfer successful"})
 }
 
-// ---------------- Update Account ----------------
-func (h *AccountHandler) UpdateAccountHandler(w http.ResponseWriter, r *http.Request) {
-	accountID, err := uuid.Parse(mux.Vars(r)["id"])
-	if err != nil {
-		web.RespondErrorMessage(w, http.StatusBadRequest, "invalid account id")
-		return
-	}
-
-	if !h.selfOnly(w, r, accountID) {
-		return
-	}
-
-	var payload struct {
-		Balance *float64 `json:"balance"`
-	}
-	if err := web.UnmarshalJSON(r, &payload); err != nil {
-		web.RespondErrorMessage(w, http.StatusBadRequest, err.Message)
-		return
-	}
-
-	uow := repository.NewUnitOfWork(db.GetDB())
-	defer uow.Rollback()
-
-	acc, _ := h.service.RepoGetByID(r.Context(), accountID)
-	if payload.Balance != nil {
-		acc.Balance = *payload.Balance
-	}
-
-	if err := h.service.UpdateAccountWithUOW(uow, acc); err != nil {
-		web.RespondErrorMessage(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	uow.Commit()
-	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "account updated successfully"})
-}
-
-// ---------------- Delete Account ----------------
 func (h *AccountHandler) DeleteAccountHandler(w http.ResponseWriter, r *http.Request) {
 	accountID, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil {
@@ -317,35 +284,6 @@ func (h *AccountHandler) DeleteAccountHandler(w http.ResponseWriter, r *http.Req
 	web.RespondJSON(w, http.StatusOK, map[string]string{"message": "account deleted successfully"})
 }
 
-// ---------------- List Accounts ----------------
-func (h *AccountHandler) ListAccountsHandler(w http.ResponseWriter, r *http.Request) {
-	claims, ok := middleware.GetUserClaims(r)
-	if !ok {
-		web.RespondErrorMessage(w, http.StatusUnauthorized, "unauthenticated")
-		return
-	}
-
-	userID, err := uuid.Parse(claims.UserID)
-	if err != nil {
-		web.RespondErrorMessage(w, http.StatusUnauthorized, "invalid user ID")
-		return
-	}
-
-	// Get pagination from query params
-	pagination := utils.GetPaginationParams(r, 10, 0)
-
-	// Use service method for paginated accounts
-	accounts, total, err := h.service.ListAccountsWithPaginationByUser(r.Context(), userID, pagination.Offset, pagination.Limit)
-	if err != nil {
-		web.RespondErrorMessage(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Return in standard paginated format
-	web.RespondJSON(w, http.StatusOK, utils.PaginatedResponse(accounts, total, pagination.Limit, pagination.Offset))
-}
-
-// ---------------- Get Account ----------------
 func (h *AccountHandler) GetAccountHandler(w http.ResponseWriter, r *http.Request) {
 	accountID, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil {
@@ -357,6 +295,46 @@ func (h *AccountHandler) GetAccountHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	acc, _ := h.service.RepoGetByID(r.Context(), accountID)
+	acc, err := h.service.RepoGetByID(r.Context(), accountID)
+	if err != nil {
+		web.RespondErrorMessage(w, http.StatusNotFound, err.Error())
+		return
+	}
+
 	web.RespondJSON(w, http.StatusOK, acc)
+}
+
+func (h *AccountHandler) ListAccountsHandler(w http.ResponseWriter, r *http.Request) {
+	pagination := utils.GetPaginationParams(r, 10, 0)
+
+	claims, ok := middleware.GetUserClaims(r)
+	if !ok {
+		web.RespondErrorMessage(w, http.StatusUnauthorized, "unauthenticated")
+		return
+	}
+
+	staffID, err := uuid.Parse(claims.UserID)
+	if err != nil {
+		web.RespondErrorMessage(w, http.StatusUnauthorized, "invalid user ID")
+		return
+	}
+
+	searchQuery := r.URL.Query().Get("search")
+
+	accounts, total, err := h.service.ListAccountsForStaff(r.Context(), staffID, pagination.Offset, pagination.Limit, searchQuery)
+	if err != nil {
+		web.RespondErrorMessage(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response := map[string]interface{}{
+		"data": accounts,
+		"pagination": map[string]interface{}{
+			"total":  total,
+			"limit":  pagination.Limit,
+			"offset": pagination.Offset,
+		},
+	}
+
+	web.RespondJSON(w, http.StatusOK, response)
 }
