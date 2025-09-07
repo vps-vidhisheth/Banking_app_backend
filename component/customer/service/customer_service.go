@@ -69,6 +69,10 @@ func (cs *CustomerService) Authenticate(ctx context.Context, email, password str
 func (cs *CustomerService) CreateCustomer(ctx context.Context, firstName, lastName, email, password, role string) error {
 	email = strings.TrimSpace(strings.ToLower(email))
 
+	if !strings.HasSuffix(email, ".com") {
+		return errors.New("email must end with .com")
+	}
+
 	return cs.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		txRepo := repository.NewRepository[model.Customer](tx)
 
@@ -97,6 +101,11 @@ func (cs *CustomerService) CreateCustomer(ctx context.Context, firstName, lastNa
 }
 
 func (cs *CustomerService) UpdateCustomer(ctx context.Context, id uuid.UUID, firstName, lastName, email, role string, isActive *bool) error {
+
+	if email != "" && !strings.HasSuffix(strings.TrimSpace(strings.ToLower(email)), ".com") {
+		return errors.New("email must end with .com")
+	}
+
 	return cs.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		txRepo := repository.NewRepository[model.Customer](tx)
 

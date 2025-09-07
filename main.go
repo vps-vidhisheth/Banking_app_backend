@@ -2,41 +2,29 @@ package main
 
 import (
 	"log"
-	"os"
 	"sync"
 
 	"banking-app/app"
+	"banking-app/config"
 	"banking-app/middleware"
-
-	"github.com/joho/godotenv"
-	"github.com/rs/cors"
 )
 
 func main() {
-	_ = godotenv.Load()
+	cfg := config.LoadConfig()
 
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		log.Fatal("JWT_SECRET is required")
+	if cfg.JWTSecret == "" {
+		log.Fatal("JWT_SECRET is required in .env or environment variables")
 	}
 
-	middleware.SetJWTSecret(jwtSecret)
+	middleware.SetJWTSecret(cfg.JWTSecret)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	myApp := app.NewApp("Banking App", &wg, jwtSecret)
+	myApp := app.NewApp("Banking App", &wg, cfg.JWTSecret)
 
-	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:4200"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Authorization", "Content-Type"},
-		AllowCredentials: true,
-	})
+	log.Printf("Server running on port %s...", cfg.Port)
 
-	myApp.Server.Handler = c.Handler(myApp.Router)
-
-	log.Printf("Server running on port %s...", os.Getenv("PORT"))
 	if err := myApp.Start(); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}

@@ -3,7 +3,6 @@ package web
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"banking-app/apperror"
 )
@@ -35,19 +34,6 @@ func RespondError(w http.ResponseWriter, err error) {
 
 func RespondErrorMessage(w http.ResponseWriter, code int, msg string) {
 	RespondJSON(w, code, map[string]string{"error": msg})
-}
-
-func RespondJSONWithXTotalCount(w http.ResponseWriter, code int, count int, payload interface{}) {
-	response, err := json.Marshal(payload)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	SetNewHeader(w, "X-Total-Count", strconv.Itoa(count))
-	w.WriteHeader(code)
-	w.Write(response)
 }
 
 func SetNewHeader(w http.ResponseWriter, headerName, value string) {

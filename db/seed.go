@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -24,12 +25,13 @@ func SeedData(database *gorm.DB) error {
 	}
 
 	admin := model.Customer{
-		FirstName: "Admin",
-		LastName:  "User",
-		Email:     "admin@bank.com",
-		Password:  string(hashedPassword),
-		Role:      "admin",
-		IsActive:  true,
+		CustomerID: uuid.New(),
+		FirstName:  "Admin",
+		LastName:   "User",
+		Email:      "admin@bank.com",
+		Password:   string(hashedPassword),
+		Role:       "admin",
+		IsActive:   true,
 	}
 
 	if err := database.Create(&admin).Error; err != nil {

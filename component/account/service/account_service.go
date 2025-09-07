@@ -20,11 +20,7 @@ type AccountService struct {
 	db                 *repository.UnitOfWork
 }
 
-func NewAccountService(
-	db *repository.UnitOfWork,
-	ledgerSvc *ledgerService.LedgerService,
-	transactionSvc *transactionService.TransactionService,
-) *AccountService {
+func NewAccountService(db *repository.UnitOfWork, ledgerSvc *ledgerService.LedgerService, transactionSvc *transactionService.TransactionService) *AccountService {
 	return &AccountService{
 		repo:               repository.NewRepository[model.Account](db.Tx()),
 		ledgerService:      ledgerSvc,

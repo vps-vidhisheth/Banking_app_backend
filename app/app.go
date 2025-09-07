@@ -64,13 +64,11 @@ type App struct {
 	}
 }
 
-// ---------------- Database Initialization ----------------
 func (a *App) initDatabase() {
 	db.InitDB()
 	log.Println("Database initialized successfully")
 }
 
-// ---------------- Repositories Initialization ----------------
 func (a *App) initRepositories() {
 	database := db.GetDB()
 	a.Repository.Account = repository.NewRepository[model.Account](database)
@@ -80,7 +78,19 @@ func (a *App) initRepositories() {
 	a.Repository.Bank = repository.NewRepository[model.Bank](database)
 }
 
-// ---------------- Handlers Initialization ----------------
+func (a *App) initServices(jwtSecret string) {
+	dbConn := db.GetDB()
+	uow := repository.NewUnitOfWork(dbConn)
+
+	a.Service.Ledger = ledgerSvc.NewLedgerService(dbConn)
+	a.Service.Transaction = transactionSvc.NewTransactionService(dbConn)
+	a.Service.Customer = customerSvc.NewCustomerService(dbConn)
+	a.Service.Account = accountSvc.NewAccountService(uow, a.Service.Ledger, a.Service.Transaction)
+	a.Service.Auth = authSvc.NewAuthService(a.Service.Customer)
+	bankRepo := repository.NewRepository[model.Bank](dbConn)
+	a.Service.Bank = bankSvc.NewBankService(bankRepo, dbConn)
+}
+
 func (a *App) initHandlers() {
 	a.Handler.Customer = customerHandler.NewCustomerHandler(a.Service.Customer)
 	a.Handler.Account = accountHandler.NewAccountHandler(a.Service.Account)
@@ -90,46 +100,35 @@ func (a *App) initHandlers() {
 	a.Handler.Bank = bankHandler.NewBankHandler(a.Service.Bank)
 }
 
-// ---------------- Services Initialization ----------------
-func (a *App) initServices(jwtSecret string) {
-	dbConn := db.GetDB()
+func CORSMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:4200")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
-	// Initialize UnitOfWork for AccountService
-	uow := repository.NewUnitOfWork(dbConn)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 
-	// Ledger and Transaction services
-	a.Service.Ledger = ledgerSvc.NewLedgerService(dbConn)
-	a.Service.Transaction = transactionSvc.NewTransactionService(dbConn)
-
-	// Customer service
-	a.Service.Customer = customerSvc.NewCustomerService(dbConn)
-
-	// Account service now uses UnitOfWork
-	a.Service.Account = accountSvc.NewAccountService(uow, a.Service.Ledger, a.Service.Transaction)
-
-	// Auth service with CustomerService injected (no jwtSecret needed here)
-	a.Service.Auth = authSvc.NewAuthService(a.Service.Customer)
-
-	// Bank service
-	bankRepo := repository.NewRepository[model.Bank](dbConn)
-	a.Service.Bank = bankSvc.NewBankService(bankRepo, dbConn)
+		next.ServeHTTP(w, r)
+	})
 }
 
-// ---------------- Router Initialization ----------------
 func (a *App) initRouter() {
 	a.Router = mux.NewRouter().StrictSlash(true)
 
-	// Global login route
+	a.Router.Use(CORSMiddleware)
+
 	if a.Handler.Auth != nil {
-		a.Router.HandleFunc("/login", a.Handler.Auth.LoginHandler).Methods("POST")
+		a.Router.HandleFunc("/login", a.Handler.Auth.LoginHandler).Methods("POST", "OPTIONS")
 	}
 
-	// API subrouter with authentication middleware
 	api := a.Router.PathPrefix("/api/v1").Subrouter()
-	api.Use(CORSMiddleware)
 	api.Use(middleware.AuthMiddleware)
+	api.Use(middleware.RecoveryMiddleware)
 
-	// Register routes
 	customerHandler.RegisterCustomerRoutes(api, a.Handler.Customer)
 	accountHandler.RegisterAccountRoutes(api, a.Handler.Account)
 	ledgerHandler.RegisterLedgerRoutes(api, a.Handler.Ledger)
@@ -137,16 +136,17 @@ func (a *App) initRouter() {
 	bankHandler.RegisterBankRoutes(api, a.Handler.Bank)
 }
 
-// ---------------- Server Initialization ----------------
 func (a *App) initServer() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
+	handler := CORSMiddleware(a.Router)
+
 	a.Server = &http.Server{
 		Addr:         ":" + port,
-		Handler:      a.Router,
+		Handler:      handler,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  30 * time.Second,
@@ -172,21 +172,6 @@ func (a *App) Stop() {
 	}
 
 	log.Println("Server stopped gracefully")
-}
-
-func CORSMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:4200")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
 }
 
 func NewApp(name string, wg *sync.WaitGroup, jwtSecret string) *App {

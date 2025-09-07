@@ -30,17 +30,3 @@ func UnmarshalJSON(r *http.Request, out interface{}) *apperror.AppError {
 
 	return nil
 }
-
-func BindAndValidate(r *http.Request, out interface{}, validate func(interface{}) *apperror.AppError) *apperror.AppError {
-	if err := UnmarshalJSON(r, out); err != nil {
-		return err
-	}
-
-	if validate != nil {
-		if err := validate(out); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
